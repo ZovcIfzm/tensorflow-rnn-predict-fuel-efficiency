@@ -1,3 +1,5 @@
+# Source: https://www.tensorflow.org/tutorials/keras/regression
+
 # Setup
 # Use seaborn for pairplot
 import matplotlib.pyplot as plt
@@ -140,3 +142,101 @@ def plot_horsepower(x, y):
 plot_horsepower(x,y)
 
 # Multiple inputs
+linear_model = tf.keras.Sequential([
+    normalizer,
+    layers.Dense(units=1)
+])
+
+linear_model.predict(train_features[:10])
+
+print("layer 1 weights:", linear_model.layers[1].kernel)
+
+linear_model.compile(
+    optimizer=tf.optimizers.Adam(learning_rate=0.1),
+    loss='mean_absolute_error')
+
+history = linear_model.fit(
+    train_features, train_labels, 
+    epochs=100,
+    # suppress logging
+    verbose=0,
+    # Calculate validation results on 20% of the training data
+    validation_split = 0.2)
+
+plot_loss(history)
+
+test_results['linear_model'] = linear_model.evaluate(
+    test_features, test_labels, verbose=0)
+
+# DNN Regression
+def build_and_compile_model(norm):
+    model = keras.Sequential([
+        norm,
+        layers.Dense(64, activation='relu'),
+        layers.Dense(64, activation='relu'),
+        layers.Dense(1)
+    ])
+
+    model.compile(loss='mean_absolute_error',
+                optimizer=tf.keras.optimizers.Adam(0.001))
+    return model
+
+dnn_horsepower_model = build_and_compile_model(horsepower_normalizer)
+dnn_horsepower_model.summary()
+
+history = dnn_horsepower_model.fit(
+    train_features['Horsepower'], train_labels,
+    validation_split=0.2,
+    verbose=0, epochs=100)
+
+plot_loss(history)
+
+x = tf.linspace(0.0, 250, 251)
+y = dnn_horsepower_model.predict(x)
+
+plot_horsepower(x, y)
+
+test_results['dnn_horsepower_model'] = dnn_horsepower_model.evaluate(
+    test_features['Horsepower'], test_labels,
+    verbose=0)
+
+dnn_model = build_and_compile_model(normalizer)
+dnn_model.summary()
+
+history = dnn_model.fit(
+    train_features, train_labels,
+    validation_split=0.2,
+    verbose=0, epochs=100)
+
+plot_loss(history)
+
+test_results['dnn_model'] = dnn_model.evaluate(test_features, test_labels, verbose=0)
+
+print("test results: ", pd.DataFrame(test_results, index=['Mean absolute error [MPG]']).T)
+
+test_predictions = dnn_model.predict(test_features).flatten()
+
+a = plt.axes(aspect='equal')
+plt.scatter(test_labels, test_predictions)
+plt.xlabel('True Values [MPG]')
+plt.ylabel('Predictions [MPG]')
+lims = [0, 50]
+plt.xlim(lims)
+plt.ylim(lims)
+_ = plt.plot(lims, lims)
+
+error = test_predictions - test_labels
+plt.hist(error, bins=25)
+plt.xlabel('Prediction Error [MPG]')
+_ = plt.ylabel('Count')
+
+
+# Saving and reloading models
+dnn_model.save('dnn_model')
+
+reloaded = tf.keras.models.load_model('dnn_model')
+
+test_results['reloaded'] = reloaded.evaluate(
+    test_features, test_labels, verbose=0)
+
+print("results: ", pd.DataFrame(test_results, index=['Mean absolute error [MPG]']).T)
