@@ -76,7 +76,13 @@ history = dnn_model.fit(
 
 test_predictions = dnn_model.predict(test_features).flatten()
 
-print("predictions:", test_predictions)
+test_predictions = [float(val) for val in test_predictions]
+
+correlation_matrix = np.corrcoef(test_predictions, test_labels)
+correlation_xy = correlation_matrix[0,1]
+r_squared = correlation_xy**2
+
+print("r squared:", r_squared)
 
 a = plt.axes(aspect='equal')
 plt.scatter(test_labels, test_predictions)
